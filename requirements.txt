@@ -1,0 +1,9 @@
+slugify
+asgiref
+django>=2.0
+channels
+pywin32
+channels_redis
+selenium
+unicode-slugify
+channels_api

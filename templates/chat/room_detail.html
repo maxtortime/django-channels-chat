@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block head %}
+	<style>
+		body {
+			overflow: hidden;
+			margin-left: 10px;
+		}
+
+		div#chat-header {
+			background: #9b4dca;
+			color: white;
+		}
+		
+		div#room {
+			display: block;
+			margin-left: 7px;
+			transform: rotate(180deg);
+			direction: rtl;
+		}
+
+		.msg {
+			transform: rotate(180deg);
+			direction: ltr;
+		}
+
+	</style>
+{% endblock %}
+{% block title %}
+	Chat Room
+{% endblock %}
+{% block content %}
+	<div id="chat-header" class="row">
+		<h4>{{ room.name }} - {{ user.chatuser.nickname }}</h4>&nbsp;
+		<h5><a style="color: white" href="{% url 'rooms' %}">채팅방 목록으로 돌아가기</a></h5>
+	</div>
+	<div id="room" class="row">
+		<div class="msg" v-for="message in messages"><strong><span>[[ message.nickname ]]</span></strong> [[
+			message.text ]]
+		</div>
+	</div>
+	<div class="row" id="chat-menu">
+		<input id="chat-message-input" type="text" placeholder="메시지 보내기">
+		<input id="chat-message-submit" type="button" value="Send">
+	</div>
+
+	<script>
+        document.getElementById('room').style.height = window.innerHeight - (document.getElementById('chat-header').clientHeight + document.getElementById('chat-menu').clientHeight) + "px";
+
+        var app = new Vue({
+            el: '#room',
+            delimiters: ['[[', ']]'],
+            data() {
+                return {
+                    name: '{{ room.slug|safe }}',
+                    messages: []
+                }
+            }
+        });
+
+
+        var chatSocket = new WebSocket(
+            'ws://' + window.location.host +
+            '/ws/chat/' + app.name + '/');
+
+        chatSocket.onmessage = function (e) {
+            var data = JSON.parse(e.data);
+            app.messages.push(data);
+        };
+
+        chatSocket.onclose = function (e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        document.querySelector('#chat-message-input').focus();
+        document.querySelector('#chat-message-input').onkeyup = function (e) {
+            if (e.keyCode === 13) {  // enter, return
+                document.querySelector('#chat-message-submit').click();
+            }
+        };
+
+        document.querySelector('#chat-message-submit').onclick = function (e) {
+            var messageInputDom = document.querySelector('#chat-message-input');
+            var message = messageInputDom.value;
+            chatSocket.send(JSON.stringify({
+                'type': 'chat_message',
+                'user': {{ user.pk }},
+                'text': message
+            }));
+
+            messageInputDom.value = '';
+        };
+	</script>
+{% endblock %}
